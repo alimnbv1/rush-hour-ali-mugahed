@@ -1,0 +1,19 @@
+# Maven
+target/
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+# Eclipse / VS Code
+.classpath
+.project
+.settings/
+.vscode/
+# OS
+.DS_Store
+Thumbs.db
+# Runtime files
+*.mv.db
+*.trace.db
+*.log
+savegame.txt
