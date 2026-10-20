@@ -1,5 +1,9 @@
 package hu.nye.rushhour;
 
+import hu.nye.rushhour.config.GameConfig;
+import hu.nye.rushhour.event.GameEventPublisher;
+import hu.nye.rushhour.event.listener.AuditLoggerListener;
+import hu.nye.rushhour.event.listener.MoveCounter;
 import hu.nye.rushhour.model.Board;
 import hu.nye.rushhour.persistence.BoardFileRepository;
 import hu.nye.rushhour.persistence.BoardTextFormat;
@@ -20,9 +24,6 @@ import java.util.Random;
  */
 public final class Main {
 
-    private static final String DEFAULT_BOARD_FILE = "board.txt";
-    private static final String DATABASE_URL = "jdbc:h2:./rushhour-db";
-
     private Main() {
     }
 
@@ -30,7 +31,14 @@ public final class Main {
      * Starts the application. Optional argument: path of the board file.
      */
     public static void main(String[] args) {
-        Path boardFile = Path.of(args.length > 0 ? args[0] : DEFAULT_BOARD_FILE);
+        GameConfig config = GameConfig.getInstance();
+        Path boardFile = Path.of(args.length > 0 ? args[0] : config.getDefaultBoardFile());
+
+        GameEventPublisher publisher = new GameEventPublisher();
+        MoveCounter moveCounter = new MoveCounter();
+        publisher.subscribe(new AuditLoggerListener());
+        publisher.subscribe(moveCounter);
+
         MoveService moveService = new MoveService();
         BoardFileRepository boardRepository = new BoardFileRepository(new BoardTextFormat());
         GameServices services = new GameServices(
@@ -38,9 +46,12 @@ public final class Main {
                 new WinChecker(),
                 new AiPlayer(moveService, new Random()),
                 boardRepository,
-                new JdbcHighScoreRepository(DATABASE_URL));
+                new JdbcHighScoreRepository(config.getDatabaseUrl()),
+                publisher);
         Board board = boardRepository.loadOrDefault(boardFile);
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
         new Game(board, services, in, System.out).start();
+        System.out.println("Moves played: " + moveCounter.getAppliedMoves()
+                + ", invalid attempts: " + moveCounter.getRejectedMoves());
     }
 }

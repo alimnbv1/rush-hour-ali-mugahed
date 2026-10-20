@@ -45,10 +45,21 @@ JJ.....KK...
 
 | Package | Tartalom |
 |---|---|
+| `config` | `GameConfig` – beállítások (**Singleton** minta) |
+| `event` | `GameEventPublisher`, `GameEventListener`, `AuditLoggerListener`, `MoveCounter` (**Observer** minta) |
 | `model` | immutable value objectek: `Position`, `Vehicle`, `Board`, `Move`, `Direction`, `Orientation`, `PlayerType`, `HighScore` |
 | `service` | üzleti logika: `MoveService` (lépés ellenőrzése/végrehajtása), `WinChecker`, `AiPlayer` |
 | `persistence` | fájlkezelés (`BoardTextFormat`, `BoardFileRepository`, `DefaultBoard`) és JDBC (`JdbcHighScoreRepository`, H2) |
 | `ui` | parancssor: `CommandParser`, `BoardRenderer`, `Game` (`start()` metódus) |
+
+## Tervezési minták
+
+- **Singleton** – `config.GameConfig`: egyetlen példány (initialization-on-demand holder idiom).
+- **Observer** – `event.GameEventPublisher`: a `Game` eseményeket publikál (lépés, hibás lépés, mentés, győzelem), a feliratkozott listenerek (naplózás, lépésszámláló) reagálnak rá. Laza csatolás: a `Game` nem ismeri a listenereket.
+- **Builder** – `Board.builder().rows(..).columns(..).vehicle(..).build()`: a tábla lépésenkénti felépítése, egyszeri validálással.
+- **Immutable Value Object** – `Position`, `Vehicle`, `Board`, `Move`: minden módosítás új objektumot ad vissza.
+- **Repository** – `HighScoreRepository` interfész és `JdbcHighScoreRepository` implementáció.
+- **Dependency Injection (konstruktoron át)** – a `Game` minden függőségét kívülről kapja, így Mockitóval tesztelhető.
 
 ## Maven pluginek és függőségek
 

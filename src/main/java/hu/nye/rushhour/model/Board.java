@@ -12,6 +12,7 @@ import java.util.Set;
 /**
  * Immutable N x M board with the vehicles on it.
  * Hero A (human) exits on the right edge, hero B (AI) exits on the left edge.
+ * Instances can be created with the constructor or with the {@link Builder} (Builder design pattern).
  */
 public final class Board {
 
@@ -126,5 +127,56 @@ public final class Board {
     @Override
     public String toString() {
         return "Board{rows=" + rows + ", columns=" + columns + ", vehicles=" + getVehicles() + "}";
+    }
+
+    /**
+     * Returns a new builder.
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder design pattern: builds a board step by step, then validates it once in {@link #build()}.
+     */
+    public static final class Builder {
+
+        private int rows;
+        private int columns;
+        private final List<Vehicle> vehicles = new ArrayList<>();
+
+        private Builder() {
+        }
+
+        /**
+         * Sets the number of rows (N).
+         */
+        public Builder rows(int value) {
+            this.rows = value;
+            return this;
+        }
+
+        /**
+         * Sets the number of columns (M).
+         */
+        public Builder columns(int value) {
+            this.columns = value;
+            return this;
+        }
+
+        /**
+         * Adds a vehicle.
+         */
+        public Builder vehicle(Vehicle vehicle) {
+            vehicles.add(vehicle);
+            return this;
+        }
+
+        /**
+         * Creates the immutable board.
+         */
+        public Board build() {
+            return new Board(rows, columns, vehicles);
+        }
     }
 }

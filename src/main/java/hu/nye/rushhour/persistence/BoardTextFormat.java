@@ -50,12 +50,12 @@ public class BoardTextFormat {
                         .add(new Position(row, column));
             }
         }
-        List<Vehicle> vehicles = new ArrayList<>();
+        Board.Builder builder = Board.builder().rows(grid.size()).columns(columns);
         for (Map.Entry<Character, List<Position>> entry : cellsById.entrySet()) {
-            vehicles.add(toVehicle(entry.getKey(), entry.getValue()));
+            builder.vehicle(toVehicle(entry.getKey(), entry.getValue()));
         }
         try {
-            return new Board(grid.size(), columns, vehicles);
+            return builder.build();
         } catch (IllegalArgumentException e) {
             throw new BoardFormatException(e.getMessage());
         }

@@ -1,5 +1,9 @@
 package hu.nye.rushhour.ui;
 
+import hu.nye.rushhour.config.GameConfig;
+import hu.nye.rushhour.event.GameEvent;
+import hu.nye.rushhour.event.GameEventPublisher;
+import hu.nye.rushhour.event.GameEventType;
 import hu.nye.rushhour.model.Board;
 import hu.nye.rushhour.model.HighScore;
 import hu.nye.rushhour.model.Move;
@@ -27,14 +31,14 @@ import org.slf4j.LoggerFactory;
 public class Game {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Game.class);
-    private static final int HIGH_SCORE_LIMIT = 10;
-    private static final String AI_NAME = "Computer";
+    private static final GameConfig CONFIG = GameConfig.getInstance();
 
     private final MoveService moveService;
     private final WinChecker winChecker;
     private final AiPlayer aiPlayer;
     private final BoardFileRepository boardRepository;
     private final HighScoreRepository highScoreRepository;
+    private final GameEventPublisher publisher;
     private final CommandParser parser;
     private final BoardRenderer renderer;
     private final BufferedReader in;
@@ -53,6 +57,7 @@ public class Game {
         this.aiPlayer = services.aiPlayer();
         this.boardRepository = services.boardRepository();
         this.highScoreRepository = services.highScoreRepository();
+        this.publisher = services.eventPublisher();
         this.parser = new CommandParser();
         this.renderer = new BoardRenderer();
         this.in = in;
@@ -72,6 +77,7 @@ public class Game {
         out.println("Hello " + playerName + "! You drive car A to the right exit (>), "
                 + "the computer drives car B to the left exit (<).");
         printHelp();
+        publish(GameEventType.GAME_STARTED, "Player: " + playerName);
         boolean running = true;
         while (running) {
             out.println(renderer.render(board));
@@ -138,9 +144,11 @@ public class Game {
             board = moveService.apply(board, humanMove);
         } catch (InvalidMoveException e) {
             out.println("Invalid move: " + e.getMessage());
+            publish(GameEventType.MOVE_REJECTED, playerName + ": " + humanMove + " - " + e.getMessage());
             return true;
         }
         out.println("You moved " + humanMove);
+        publish(GameEventType.MOVE_APPLIED, playerName + ": " + humanMove);
         if (isGameOver()) {
             return false;
         }
@@ -152,8 +160,10 @@ public class Game {
         try {
             board = moveService.apply(board, aiMove.get());
             out.println("Computer moved " + aiMove.get());
+            publish(GameEventType.MOVE_APPLIED, CONFIG.getComputerName() + ": " + aiMove.get());
         } catch (InvalidMoveException e) {
             LOGGER.error("AI produced an invalid move", e);
+            publish(GameEventType.ERROR, "AI produced an invalid move: " + aiMove.get());
         }
         return !isGameOver();
     }
@@ -167,9 +177,11 @@ public class Game {
         if (winner.get() == PlayerType.HUMAN) {
             out.println("Congratulations " + playerName + ", car A left the board. You won!");
             highScoreRepository.recordWin(playerName);
+            publish(GameEventType.GAME_WON, playerName);
         } else {
             out.println("Car B left the board. The computer won!");
-            highScoreRepository.recordWin(AI_NAME);
+            highScoreRepository.recordWin(CONFIG.getComputerName());
+            publish(GameEventType.GAME_WON, CONFIG.getComputerName());
         }
         printHighScores();
         return true;
@@ -179,6 +191,7 @@ public class Game {
         try {
             boardRepository.save(Path.of(fileName), board);
             out.println("Board saved to " + fileName);
+            publish(GameEventType.BOARD_SAVED, fileName);
         } catch (IOException e) {
             out.println("Could not save: " + e.getMessage());
         }
@@ -188,13 +201,18 @@ public class Game {
         try {
             board = boardRepository.load(Path.of(fileName));
             out.println("Board loaded from " + fileName);
+            publish(GameEventType.BOARD_LOADED, fileName);
         } catch (IOException | BoardFormatException e) {
             out.println("Could not load: " + e.getMessage());
         }
     }
 
+    private void publish(GameEventType type, String message) {
+        publisher.publish(new GameEvent(type, message));
+    }
+
     private void printHighScores() {
-        List<HighScore> scores = highScoreRepository.findTop(HIGH_SCORE_LIMIT);
+        List<HighScore> scores = highScoreRepository.findTop(CONFIG.getHighScoreLimit());
         out.println("--- HIGH SCORES ---");
         if (scores.isEmpty()) {
             out.println("(no games won yet)");

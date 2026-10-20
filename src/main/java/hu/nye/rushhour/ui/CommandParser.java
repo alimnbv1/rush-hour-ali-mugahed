@@ -1,5 +1,6 @@
 package hu.nye.rushhour.ui;
 
+import hu.nye.rushhour.config.GameConfig;
 import hu.nye.rushhour.model.Direction;
 import hu.nye.rushhour.model.Move;
 
@@ -9,7 +10,7 @@ import hu.nye.rushhour.model.Move;
  */
 public class CommandParser {
 
-    static final String DEFAULT_SAVE_FILE = "savegame.txt";
+    static final String DEFAULT_SAVE_FILE = GameConfig.getInstance().getDefaultSaveFile();
 
     /**
      * Parses one input line.

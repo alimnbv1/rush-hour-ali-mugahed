@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import hu.nye.rushhour.TestBoards;
+import hu.nye.rushhour.event.GameEventPublisher;
+import hu.nye.rushhour.event.listener.MoveCounter;
 import hu.nye.rushhour.model.Board;
 import hu.nye.rushhour.model.Direction;
 import hu.nye.rushhour.model.HighScore;
@@ -48,12 +50,16 @@ class GameTest {
 
     private ByteArrayOutputStream output;
     private GameServices services;
+    private MoveCounter moveCounter;
 
     @BeforeEach
     void setUp() {
         output = new ByteArrayOutputStream();
+        GameEventPublisher publisher = new GameEventPublisher();
+        moveCounter = new MoveCounter();
+        publisher.subscribe(moveCounter);
         services = new GameServices(new MoveService(), new WinChecker(), aiPlayer,
-                new BoardFileRepository(new BoardTextFormat()), highScoreRepository);
+                new BoardFileRepository(new BoardTextFormat()), highScoreRepository, publisher);
     }
 
     private Game newGame(Board board, String input) {
@@ -94,6 +100,7 @@ class GameTest {
         assertTrue(game.handle("A R 3"));
         assertEquals(board, game.getBoard());
         assertTrue(output().contains("Invalid move"));
+        assertEquals(1, moveCounter.getRejectedMoves());
         verify(aiPlayer, never()).chooseMove(any());
     }
 
@@ -105,6 +112,7 @@ class GameTest {
         assertTrue(game.handle("A R 1"));
         assertEquals(1, game.getBoard().getVehicle('A').orElseThrow().getStart().getColumn());
         assertEquals(1, game.getBoard().getVehicle('C').orElseThrow().getStart().getRow());
+        assertEquals(2, moveCounter.getAppliedMoves());
     }
 
     @Test
